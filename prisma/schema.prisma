@@ -17,7 +17,8 @@ provider = "sqlite"
 
 model User {
   id      Int      @id @default(autoincrement())
+  userId  String @unique
   email   String   @unique
-  name    String?
+  name    String
   
 }
