@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+ 
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,5 +15,53 @@ model User {
   userId  String @unique
   email   String   @unique
   name    String
+  userType          String        @default("FREE")  // "FREE", "PREMIUM", "ENTERPRISE"
+  subscriptions Subscription[]
   
+}
+
+model PaypalToken {
+  id          Int      @id @default(autoincrement())
+  accessToken String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+ 
+
+
+model Subscription {
+  id                  String    @id @default(uuid())
+  userId              String    // This references User.userId, not User.id
+  planId              String    // P-5ML4271244454362WXNWU5NQ
+  SubscriptionId String   @unique  // I-BW452GLLEP1G
+  status              String    // ACTIVE, SUSPENDED, CANCELLED
+  
+  nextBillingTime     DateTime?
+  lastPaymentAmount   Float?
+  lastPaymentTime     DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relation to User
+  user                User      @relation(fields: [userId], references: [userId],onDelete: Cascade)
+  plan                 Plan @relation(fields: [planId], references: [id])
+@@index([planId])
+  @@index([userId])
+}
+
+model Plan {
+  id          String         @id @default(uuid())
+  paypalPlanId String        @unique  // P-5ML4271244454362WXNWU5NQ
+  name        String         // "Basic", "Pro", "Enterprise"
+  description String?
+  price       Float
+  currency    String         @default("USD")
+  interval    String         // "MONTH", "YEAR"
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  subscriptions Subscription[]
 }

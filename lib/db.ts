@@ -1,4 +1,4 @@
-import { PrismaClient, User } from "@prisma/client";
+import { Plan, PrismaClient, User } from "@prisma/client";
 
 const prismaClientSingleton = () => {
   return new PrismaClient();
@@ -67,6 +67,16 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
     return user;
   } catch (error) {
     console.error("Error retrieving user by email:", error);
+    return null;
+  }
+};
+
+export const getAllPlans = async (): Promise<Plan[] | null> => {
+  try {
+    const plans = await prisma.plan.findMany();
+    return plans;
+  } catch (error) {
+    console.error("Error retrieving plans:", error);
     return null;
   }
 };
