@@ -17,6 +17,16 @@ export async function saveSubscriptionId(
       return { success: false, error: "Plan not found" };
     }
 
+    const userExists = await prisma.user.findUnique({
+      where: { userId },
+    });
+
+    if (!userExists) {
+      console.log("user not found ", userId);
+
+      return { success: false, error: "User not found" };
+    }
+
     // Check for existing pending subscriptions and clean them up
     await prisma.subscription.deleteMany({
       where: {

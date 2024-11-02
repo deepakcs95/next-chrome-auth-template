@@ -8,7 +8,7 @@ export async function POST(req: Request) {
     const headersList = headers();
     const payload = await req.json();
 
-    console.log("Received Webhook Payload:", JSON.stringify(payload, null, 2));
+    console.log("Received Webhook Payload:", payload.event_type);
 
     const paypalService = await getPayPalService();
     const isValid = await paypalService.verifyWebhookSignature(headersList, payload);

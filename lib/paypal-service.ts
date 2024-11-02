@@ -162,7 +162,7 @@ class PayPalService {
       transmissionTime: headers.get("paypal-transmission-time"),
     };
 
-    console.log("Extracted Headers:", JSON.stringify(requiredFields, null, 2));
+    // console.log("Extracted Headers:", JSON.stringify(requiredFields, null, 2));
 
     // Check for missing required fields
     const missingFields = Object.entries(requiredFields)
@@ -190,7 +190,7 @@ class PayPalService {
 
       const verificationPayload = {
         auth_algo: extractedHeaders.auth_algo,
-        cert_url: "cert_url",
+        cert_url: extractedHeaders.cert_url || "cert_url",
         transmission_id: extractedHeaders.transmission_id,
         transmission_sig: extractedHeaders.transmission_sig,
         transmission_time: extractedHeaders.transmission_time,
@@ -198,7 +198,7 @@ class PayPalService {
         webhook_event: payload, // Add the actual webhook event payload
       };
 
-      console.log("Verification Payload:", JSON.stringify(verificationPayload, null, 2));
+      // console.log("Verification Payload:", JSON.stringify(verificationPayload, null, 2));
 
       const response = await fetch(`${this.baseUrl}/v1/notifications/verify-webhook-signature`, {
         method: "POST",
