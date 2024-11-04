@@ -1,6 +1,6 @@
 // lib/paypal-service.ts
 import { cache } from "react";
-import prisma from "./db";
+import prisma from "@/lib/db";
 import { headers } from "next/headers";
 
 interface PayPalAuthResponse {

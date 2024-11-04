@@ -1,9 +1,26 @@
 -- CreateTable
+CREATE TABLE "User" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "userId" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "userType" TEXT NOT NULL DEFAULT 'FREE'
+);
+
+-- CreateTable
+CREATE TABLE "PaypalToken" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "accessToken" TEXT NOT NULL,
+    "expiresAt" DATETIME NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CreateTable
 CREATE TABLE "Subscription" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "userId" TEXT NOT NULL,
     "planId" TEXT NOT NULL,
-    "SubscriptionId" TEXT,
+    "SubscriptionId" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "nextBillingTime" DATETIME,
     "lastPaymentAmount" REAL,
@@ -28,23 +45,17 @@ CREATE TABLE "Plan" (
     "updatedAt" DATETIME NOT NULL
 );
 
--- RedefineTables
-PRAGMA defer_foreign_keys=ON;
-PRAGMA foreign_keys=OFF;
-CREATE TABLE "new_User" (
-    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "userId" TEXT NOT NULL,
-    "email" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "userType" TEXT NOT NULL DEFAULT 'FREE'
-);
-INSERT INTO "new_User" ("email", "id", "name", "userId") SELECT "email", "id", "name", "userId" FROM "User";
-DROP TABLE "User";
-ALTER TABLE "new_User" RENAME TO "User";
+-- CreateIndex
 CREATE UNIQUE INDEX "User_userId_key" ON "User"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
-PRAGMA foreign_keys=ON;
-PRAGMA defer_foreign_keys=OFF;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PaypalToken_accessToken_key" ON "PaypalToken"("accessToken");
+
+-- CreateIndex
+CREATE INDEX "PaypalToken_expiresAt_idx" ON "PaypalToken"("expiresAt");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Subscription_SubscriptionId_key" ON "Subscription"("SubscriptionId");

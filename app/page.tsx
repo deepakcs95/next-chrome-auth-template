@@ -1,6 +1,5 @@
 import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import Token from "./(auth)/auth/_components/token";
-import { PayPalSubscribe } from "@/components/subscription/PayPalSubScription";
 import { Toaster } from "@/components/ui/toaster";
 export default function page() {
   return (
@@ -21,10 +20,7 @@ export default function page() {
           <p className="text-lg text-gray-600">Select the perfect plan for your needs</p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <PayPalSubscribe planId="pro" />
-          <PayPalSubscribe planId="enterprise" />
-        </div>
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto"></div>
       </div>
       {/* <ExtensionSync /> */}
       <Toaster />

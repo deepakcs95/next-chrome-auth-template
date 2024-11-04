@@ -1,20 +1,6 @@
-import { Plan, PrismaClient, User } from "@prisma/client";
+import { User } from "@prisma/client";
+import prisma from "./client";
 
-const prismaClientSingleton = () => {
-  return new PrismaClient();
-};
-
-declare const globalThis: {
-  prismaGlobal: ReturnType<typeof prismaClientSingleton>;
-} & typeof global;
-
-const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
-
-export default prisma;
-
-if (process.env.NODE_ENV !== "production") globalThis.prismaGlobal = prisma;
-
-// Create a new user
 export const createUser = async (
   email: string,
   userId: string,
@@ -31,7 +17,6 @@ export const createUser = async (
   }
 };
 
-// Update an existing user
 export const updateUser = async (userId: string, data: Partial<User>): Promise<User | null> => {
   try {
     const updatedUser = await prisma.user.update({
@@ -45,7 +30,18 @@ export const updateUser = async (userId: string, data: Partial<User>): Promise<U
   }
 };
 
-// Get a user by ID
+export const deleteUser = async (userId: string): Promise<User | null> => {
+  try {
+    const deletedUser = await prisma.user.delete({
+      where: { userId },
+    });
+    return deletedUser;
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return null;
+  }
+};
+
 export const getUserById = async (userId: string): Promise<User | null> => {
   try {
     const user = await prisma.user.findUnique({
@@ -58,7 +54,6 @@ export const getUserById = async (userId: string): Promise<User | null> => {
   }
 };
 
-// Get a user by email
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   try {
     const user = await prisma.user.findUnique({
@@ -67,16 +62,6 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
     return user;
   } catch (error) {
     console.error("Error retrieving user by email:", error);
-    return null;
-  }
-};
-
-export const getAllPlans = async (): Promise<Plan[] | null> => {
-  try {
-    const plans = await prisma.plan.findMany();
-    return plans;
-  } catch (error) {
-    console.error("Error retrieving plans:", error);
     return null;
   }
 };

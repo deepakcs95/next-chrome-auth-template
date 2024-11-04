@@ -1,4 +1,3 @@
- 
 generator client {
   provider = "prisma-client-js"
 }
@@ -29,39 +28,86 @@ model PaypalToken {
   @@index([expiresAt])
 }
 
- 
-
-
 model Subscription {
   id                  String    @id @default(uuid())
   userId              String    // This references User.userId, not User.id
   planId              String    // P-5ML4271244454362WXNWU5NQ
   SubscriptionId String   @unique  // I-BW452GLLEP1G
   status              String    // ACTIVE, SUSPENDED, CANCELLED
-  
   nextBillingTime     DateTime?
   lastPaymentAmount   Float?
   lastPaymentTime     DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  invoices          Invoice[]
+  usage             Usage[]
+
   // Relation to User
   user                User      @relation(fields: [userId], references: [userId],onDelete: Cascade)
-  plan                 Plan @relation(fields: [planId], references: [id])
+  plan                 Plan @relation(fields: [planId], references: [paypalPlanId])
 @@index([planId])
   @@index([userId])
 }
 
 model Plan {
   id          String         @id @default(uuid())
-  paypalPlanId String        @unique  // P-5ML4271244454362WXNWU5NQ
-  name        String         // "Basic", "Pro", "Enterprise"
+  paypalPlanId String        @unique
+  name        String
   description String?
   price       Float
   currency    String         @default("USD")
   interval    String         // "MONTH", "YEAR"
   isActive    Boolean        @default(true)
+  features    PlanFeature[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
   subscriptions Subscription[]
 }
+
+model PlanFeature {
+  id          String    @id @default(uuid())
+  planId      String
+  name        String
+  description String?
+  included    Boolean   @default(true)
+  limit       Int?      // For features with numerical limits
+  plan        Plan      @relation(fields: [planId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([planId])
+}
+
+model Usage {
+  id              String    @id @default(uuid())
+  subscriptionId  String
+  featureId       String
+  count           Int       @default(0)
+  lastUpdated     DateTime  @default(now())
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([featureId])
+}
+
+model Invoice {
+  id              String    @id @default(uuid())
+  subscriptionId  String
+  amount          Float
+  currency        String    @default("USD")
+  status          String    // "PAID", "PENDING", "FAILED"
+  paypalInvoiceId String?   @unique
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  paidAt          DateTime?
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([subscriptionId])
+} 
+
