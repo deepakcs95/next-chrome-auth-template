@@ -10,28 +10,43 @@ import { PayPalButtons } from "@paypal/react-paypal-js";
 import { useRouter } from "next/navigation";
 import React from "react";
 import { Button } from "../ui/button";
+import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 interface PayPalButtonProps {
   planId: string;
   hasActiveSubscription: boolean;
   userId?: string | null;
-  subscritptionId?: string;
+  status?: string;
+  subscritptionId?: string | null;
 }
-const PayPalButton = ({
+const PayButton = ({
   planId,
   hasActiveSubscription,
   userId,
+  status,
   subscritptionId,
 }: PayPalButtonProps) => {
   const router = useRouter();
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const toast = useToast();
+  const showToast = (toast as any).toast || toast;
 
   if (!userId) {
-    return <Button onClick={() => router.push("/auth")}>Sign in to Subscribe</Button>;
+    return (
+      <Link href="/auth/sign-in">
+        <Button className="w-full ">Sign in to Subscribe</Button>
+      </Link>
+    );
   }
+  // console.log(userId, planId, hasActiveSubscription, status, subscritptionId);
 
   const handleApprove = async (data: any, actions: any) => {
+    showToast({
+      title: "Payment successful",
+      description: "Your subscription has been activated",
+    });
     try {
       setIsProcessing(true);
       setError(null);
@@ -44,33 +59,16 @@ const PayPalButton = ({
     }
   };
 
-  const initiatePayment = async (subscriptionId: string) => {
-    try {
-      const response = await saveSubscriptionId(subscriptionId, userId, planId);
-      if (!response.success) {
-        throw new Error("Failed to save subscription");
-      }
-      return true;
-    } catch (error) {
-      setError("Failed to initialize subscription. Please try again.");
-      console.error("Subscription initialization error:", error);
-      return false;
-    }
-  };
-
   return (
     <>
       {!hasActiveSubscription ? (
         <PayPalButtons
           style={{ layout: "vertical" }}
           createSubscription={async (data, actions) => {
-            const subscriptionId = await actions.subscription.create({
+            return actions.subscription.create({
               plan_id: planId,
+              custom_id: userId,
             });
-
-            initiatePayment(subscriptionId);
-
-            return subscriptionId;
           }}
           onApprove={handleApprove}
           onError={(e) => {
@@ -79,14 +77,13 @@ const PayPalButton = ({
           }}
         />
       ) : (
-        userId &&
-        subscritptionId && (
+        userId && (
           <div>
             <span>
               {userId}==={planId}
             </span>
-            <Button onClick={async ({}) => await cancelSubscription(subscritptionId)}>
-              Cancel
+            <Button onClick={async ({}) => await cancelSubscription(subscritptionId!)}>
+              {status}
             </Button>
           </div>
         )
@@ -95,4 +92,4 @@ const PayPalButton = ({
   );
 };
 
-export default PayPalButton;
+export default PayButton;

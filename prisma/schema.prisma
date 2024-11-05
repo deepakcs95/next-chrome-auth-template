@@ -45,6 +45,7 @@ model Subscription {
   cancelAtPeriodEnd  Boolean   @default(false)
   invoices          Invoice[]
   usage             Usage[]
+  payments          Payment[] @relation("SubscriptionPayments")
 
   // Relation to User
   user                User      @relation(fields: [userId], references: [userId],onDelete: Cascade)
@@ -110,4 +111,19 @@ model Invoice {
 
   @@index([subscriptionId])
 } 
+
+model Payment {
+  id          String   @id @default(uuid())
+  subscriptionId String // Reference to Subscription
+  status      String   // PAYMENT.SALE.COMPLETED, PAYMENT.SALE.DENIED, PAYMENT.SALE.PENDING, PAYMENT.SALE.REFUNDED, PAYMENT.SALE.REVERSED
+  amount      Float    // Amount of the payment
+  currency    String   @default("USD") // Currency of the payment
+  createdAt   DateTime @default(now()) // Timestamp of when the payment was created
+  updatedAt   DateTime @updatedAt // Timestamp of the last update
+
+  // Relation to Subscription
+  subscription Subscription @relation("SubscriptionPayments", fields: [subscriptionId], references: [SubscriptionId], onDelete: Cascade)
+
+  @@index([subscriptionId])
+}
 

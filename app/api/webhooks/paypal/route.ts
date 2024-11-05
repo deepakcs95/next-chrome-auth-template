@@ -30,11 +30,13 @@ export async function POST(req: Request) {
     const handler = WebhookHandlerFactory.getHandler("paypal");
     switch (payload.event_type) {
       case "BILLING.SUBSCRIPTION.CREATED":
-        // await handler.handleSubscriptionUpdated(webhookEvent);
-
+        // await handler.handleSubscriptionCreated(webhookEvent);
+        break;
+      case "PAYMENT.SALE.COMPLETED":
+        await handler.handlePaymentCompleted(webhookEvent);
         break;
       case "BILLING.SUBSCRIPTION.ACTIVATED":
-        await handler.handleSubscriptionUpdated(webhookEvent);
+        // await handler.handleSubscriptionUpdated(webhookEvent);
         break;
       case "BILLING.SUBSCRIPTION.CANCELLED":
         await handler.handleSubscriptionCancelled(webhookEvent);

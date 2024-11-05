@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 export async function getAvailablePlans() {
   try {
@@ -29,4 +29,11 @@ export async function getPlanById(planId: string) {
     console.error("Failed to fetch plan:", error);
     return { success: false, error: "Failed to fetch plan" };
   }
+}
+
+export async function getPlanByAmount(amount: number) {
+  const plan = await prisma.plan.findFirst({
+    where: { price: amount, isActive: true },
+  });
+  return { success: true, plan };
 }
