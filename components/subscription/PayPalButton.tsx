@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  cancelSubscription,
-  cancelSubscriptionUsingPlanId,
-  saveSubscriptionId,
-} from "@/actions/subscription";
+import { cancelSubscription } from "@/lib/webhook/db-handler";
 import { useAuth } from "@clerk/nextjs";
 import { PayPalButtons } from "@paypal/react-paypal-js";
 import { useRouter } from "next/navigation";
@@ -12,6 +8,7 @@ import React from "react";
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { useFormStatus } from "react-dom";
 
 interface PayPalButtonProps {
   planId: string;
@@ -30,6 +27,7 @@ const PayButton = ({
   const router = useRouter();
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const { pending } = useFormStatus();
   const toast = useToast();
   const showToast = (toast as any).toast || toast;
 
@@ -82,8 +80,15 @@ const PayButton = ({
             <span>
               {userId}==={planId}
             </span>
-            <Button onClick={async ({}) => await cancelSubscription(subscritptionId!)}>
-              {status}
+
+            <Button disabled={pending} onClick={() => cancelSubscription(subscritptionId!)}>
+              {pending
+                ? "Waiting..."
+                : status === "ACTIVATED"
+                ? "Cancel Subscription"
+                : status === "PAYMENT_RECEIVED" || status === "APPROVAL_PENDING"
+                ? "Pending"
+                : "Cancel Subscription"}
             </Button>
           </div>
         )

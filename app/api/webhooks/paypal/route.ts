@@ -12,8 +12,8 @@ export async function POST(req: Request) {
     console.log("Received Webhook Payload:", payload.event_type);
 
     const paypalService = await getPayPalService();
-    // const isValid = await paypalService.verifyWebhookSignature(headersList, payload);
-    const isValid = true;
+    const isValid = await paypalService.verifyWebhookSignature(headersList, payload);
+    // const isValid = true;
     if (!isValid) {
       console.error("Invalid webhook signature");
       return new NextResponse("Invalid webhook signature", { status: 401 });
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         await handler.handlePaymentCompleted(webhookEvent);
         break;
       case "BILLING.SUBSCRIPTION.ACTIVATED":
-        // await handler.handleSubscriptionUpdated(webhookEvent);
+        await handler.handleSubscriptionUpdated(webhookEvent);
         break;
       case "BILLING.SUBSCRIPTION.CANCELLED":
         await handler.handleSubscriptionCancelled(webhookEvent);

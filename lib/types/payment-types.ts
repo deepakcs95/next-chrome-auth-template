@@ -4,7 +4,6 @@ export type WebhookEvent = {
   id: string;
   type: string;
   data: Record<string, any>;
-  resource: Record<string, any>;
   provider: PaymentProvider;
   timestamp: Date;
 };
@@ -12,7 +11,7 @@ export type WebhookEvent = {
 export type SubscriptionStatus =
   | "APPROVAL_PENDING"
   | "PAYMENT_RECEIVED"
-  | "ACTIVE"
+  | "ACTIVATED"
   | "CANCELLED"
   | "SUSPENDED"
   | "FAILED";

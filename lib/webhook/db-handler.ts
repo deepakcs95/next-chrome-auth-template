@@ -2,7 +2,9 @@
 
 import { prisma } from "@/lib/db";
 import { SubscriptionStatus, WebhookEvent } from "@/lib/types/payment-types";
+import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
+import { getPayPalService } from "./paypal-service";
 
 export async function saveSubscriptionId(
   subscriptionId: string,
@@ -91,9 +93,66 @@ export async function updateSubscriptionStatus({
     lastPaymentTime
   );
 
+  //   return;
+
   try {
     switch (status) {
-      case "ACTIVE":
+      case "ACTIVATED":
+        try {
+          const existingSubscription = await prisma.subscription.findFirst({
+            where: {
+              userId,
+              SubscriptionId,
+              status: {
+                in: ["ACTIVE"],
+              },
+            },
+          });
+
+          if (existingSubscription) {
+            console.error("Subscription already exists plase request to cancel");
+            return;
+          }
+
+          await prisma.$transaction(async (tx) => {
+            const subscription = await tx.subscription.upsert({
+              where: { SubscriptionId },
+              update: {
+                status,
+                nextBillingTime,
+                currentPeriodEnd: nextBillingTime,
+                lastPaymentAmount,
+              },
+              create: {
+                userId,
+                planId,
+                SubscriptionId,
+                status,
+                nextBillingTime,
+                currentPeriodStart: new Date(),
+                currentPeriodEnd: nextBillingTime,
+                lastPaymentAmount,
+              },
+            });
+
+            const plan = await tx.plan.findUnique({
+              where: { paypalPlanId: planId },
+            });
+
+            if (plan) {
+              await tx.user.update({
+                where: { userId },
+                data: {
+                  userType: plan.name, // Assuming plan has a type field (FREE, PREMIUM, ENTERPRISE)
+                },
+              });
+            }
+          });
+          console.log("✅ Transaction successful, subscription created successfully");
+        } catch (error) {
+          console.error("❌ Failed to update subscription:", error);
+          return { success: false, error: "Failed to update subscription" };
+        }
         break;
       case "APPROVAL_PENDING":
         break;
@@ -132,8 +191,9 @@ export async function updateSubscriptionStatus({
                 },
               });
             });
+            console.log("✅ Transaction successful, payment created successfully");
           } catch (error) {
-            console.error("Transaction failed, please retry the webhook:", error);
+            console.error("❌ Transaction failed, please retry the webhook:", error);
             throw new Error("Transaction failed, please retry the webhook");
           }
         } else {
@@ -144,101 +204,10 @@ export async function updateSubscriptionStatus({
         break;
     }
   } catch (error) {
-    console.error("Failed to update subscription:", error);
+    console.error("❌ Failed to update subscription:", error);
     return { success: false, error: "Failed to update subscription" };
   }
 }
-
-// export async function cancelSubscription(subscriptionId: string) {
-//   try {
-//     const subscription = await prisma.subscription.update({
-//       where: { SubscriptionId: subscriptionId },
-//       data: {
-//         status: "cancelled",
-//       },
-//     });
-
-//     // Reset user type to FREE
-//     await prisma.user.update({
-//       where: { userId: subscription.userId },
-//       data: { userType: "FREE" },
-//     });
-
-//     return { success: true, subscription };
-//   } catch (error) {
-//     console.error("Failed to cancel subscription:", error);
-//     return { success: false, error: "Failed to cancel subscription" };
-//   }
-// }
-// export async function cancelSubscriptionUsingPlanId({
-//   planId,
-//   userId,
-// }: {
-//   planId: string;
-//   userId: string;
-// }) {
-//   try {
-//     console.log(planId, userId);
-
-//     const subscriptionToDelete = await prisma.subscription.findFirst({
-//       where: {
-//         planId: planId,
-//         userId: userId,
-//       },
-//     });
-//     console.log(subscriptionToDelete);
-//     if (subscriptionToDelete) {
-//       const deletedSubscription = await prisma.subscription.delete({
-//         where: {
-//           id: subscriptionToDelete.id, // use the unique ID of the found subscription
-//         },
-//       });
-//       console.log("Subscription deleted:", deletedSubscription);
-
-//       revalidatePath("/plans");
-//     }
-//     return { success: true };
-//   } catch (error) {
-//     console.error("Failed to cancel subscription:", error);
-//     return { success: false, error: "Failed to cancel subscription" };
-//   }
-// }
-
-// export async function cleanupPendingSubscriptions() {
-//   try {
-//     // Delete pending subscriptions older than 24 hours
-//     const result = await prisma.subscription.deleteMany({
-//       where: {
-//         status: "PENDING",
-//         createdAt: {
-//           lt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-//         },
-//       },
-//     });
-//     return { success: true, deletedCount: result.count };
-//   } catch (error) {
-//     console.error("Failed to cleanup pending subscriptions:", error);
-//     return { success: false, error: "Failed to cleanup pending subscriptions" };
-//   }
-// }
-
-// export async function getUserSubscription(userId: string) {
-//   try {
-//     const subscription = await prisma.subscription.findFirst({
-//       where: {
-//         userId,
-//         status: "ACTIVE",
-//       },
-//       include: {
-//         plan: true,
-//       },
-//     });
-//     return { success: true, subscription };
-//   } catch (error) {
-//     console.error("Failed to fetch user subscription:", error);
-//     return { success: false, error: "Failed to fetch user subscription" };
-//   }
-// }
 
 export async function getCurrentSubscription(userId: string) {
   try {
@@ -246,7 +215,7 @@ export async function getCurrentSubscription(userId: string) {
       where: {
         userId,
         status: {
-          in: ["ACTIVATED", "APPROVAL_PENDING", "PAYMENT_RECEIVED"],
+          in: ["ACTIVE", "PENDING"],
         },
       },
       include: {
@@ -266,4 +235,46 @@ export async function getCurrentSubscription(userId: string) {
     console.error("Error fetching current subscription:", error);
     return { success: false, error: "Failed to fetch subscription" };
   }
+}
+
+export async function handleCancelledSubscription(
+  userId: string,
+  SubscriptionId: string,
+  planId: string
+) {
+  try {
+    console.log("userId", userId, "SubscriptionId", SubscriptionId, "planId", planId);
+    const subscription = await prisma.subscription.update({
+      where: { userId, planId, SubscriptionId },
+      data: {
+        status: "CANCELLED",
+      },
+    });
+
+    console.log("✅ Successfully cancelled subscription", subscription);
+  } catch (error) {
+    console.error("❌ Error handling cancelled subscription:", error);
+    return { success: false, error: "Failed to handle cancelled subscription" };
+  }
+}
+
+export async function cancelSubscription(subscriptionId: string) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const paypalService = await getPayPalService();
+  console.log("userId", userId, subscriptionId);
+  const response = await paypalService.makeRequest(
+    `/v1/billing/subscriptions/${subscriptionId}/cancel`,
+    "POST",
+    {
+      reason: "Not satisfied with the service",
+    }
+  );
+
+  revalidatePath("/");
+  return { success: true, data: response };
 }

@@ -1,6 +1,6 @@
 // lib/paypal-service.ts
 import { cache } from "react";
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { headers } from "next/headers";
 
 interface PayPalAuthResponse {
@@ -236,6 +236,8 @@ class PayPalService {
         "Content-Type": "application/json",
       };
 
+      console.log(`${this.baseUrl}${endpoint}`);
+
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method,
         headers,
@@ -243,18 +245,20 @@ class PayPalService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(JSON.stringify(errorData));
+        if (response.status === 204) {
+          console.log("✅ successdully called ✅");
+        } else {
+          const data = await response.json();
+          console.log("🚨 response not ok 🚨", data);
+        }
       }
-
-      return response.json();
+      return await response.json();
     } catch (error) {
-      console.error("PayPal API request failed:", error);
+      console.error("🚨 PayPal API request failed 🚨: ", error);
       throw error;
     }
   }
 }
-
 export const getPayPalService = cache(() => {
   return PayPalService.getInstance();
 });

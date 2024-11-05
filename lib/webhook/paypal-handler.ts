@@ -1,7 +1,11 @@
 import { getPlanByAmount, getPlanById } from "@/actions/plans";
 import { prisma } from "../db";
 import { PaymentWebhookHandler, SubscriptionStatus, WebhookEvent } from "../types/payment-types";
-import { saveSubscriptionId, updateSubscriptionStatus } from "@/actions/subscription";
+import {
+  handleCancelledSubscription,
+  saveSubscriptionId,
+  updateSubscriptionStatus,
+} from "./db-handler";
 
 export class PayPalWebhookHandler implements PaymentWebhookHandler {
   async handleSubscriptionCreated(event: WebhookEvent): Promise<void> {
@@ -11,36 +15,40 @@ export class PayPalWebhookHandler implements PaymentWebhookHandler {
 
   async handleSubscriptionUpdated(event: WebhookEvent): Promise<void> {
     console.log("handleSubscriptionUpdated", event);
+    const userId = event.data.resource.custom_id;
+    const status = "ACTIVATED";
+    const planId = event.data.resource.plan_id;
+    const SubscriptionId = event.data.resource.id;
 
-    const resource = event.data.resource;
-    const nextBillingTime = resource.billing_info?.next_billing_time
-      ? new Date(resource.billing_info.next_billing_time)
+    const nextBillingTime = event.data.resource.billing_info?.next_billing_time
+      ? new Date(event.data.resource.billing_info.next_billing_time)
       : new Date();
+    const lastPaymentAmount = Number(event.data.resource.billing_info.last_payment.amount.value);
+
+    if (!status || !userId || !planId || !SubscriptionId) {
+      console.error("Missing required fields in subscription updated event");
+      return;
+    }
 
     await updateSubscriptionStatus({
-      userId: resource.custom,
-      status: this.mapPayPalStatus(resource.status),
-      paypalPlanId: resource.plan_id,
-      nextBillingTime: nextBillingTime ? new Date(nextBillingTime) : undefined,
-      lastPaymentAmount: resource.amount.total,
+      userId,
+      status,
+      planId,
+      SubscriptionId,
+      nextBillingTime,
+      lastPaymentTime: new Date(),
+      lastPaymentAmount,
+      webhookEvent: event,
     });
   }
 
   async handleSubscriptionCancelled(event: WebhookEvent): Promise<void> {
     const resource = event.data.resource;
-    // await updateSubscriptionStatus(resource.id, "CANCELLED");
-  }
+    const userId = resource.custom_id;
+    const SubscriptionId = resource.id;
+    const planId = resource.plan_id;
 
-  private mapPayPalStatus(paypalStatus: string): SubscriptionStatus {
-    const statusMap: Record<string, SubscriptionStatus> = {
-      APPROVAL_PENDING: "PENDING",
-      APPROVED: "ACTIVE",
-      ACTIVE: "ACTIVE",
-      SUSPENDED: "SUSPENDED",
-      CANCELLED: "CANCELLED",
-      EXPIRED: "CANCELLED",
-    };
-    return statusMap[paypalStatus] || "FAILED";
+    await handleCancelledSubscription(userId, SubscriptionId, planId);
   }
 
   async handlePaymentCompleted(event: WebhookEvent): Promise<void> {

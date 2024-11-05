@@ -49,7 +49,7 @@ model Subscription {
 
   // Relation to User
   user                User      @relation(fields: [userId], references: [userId],onDelete: Cascade)
-  plan                 Plan @relation(fields: [planId], references: [paypalPlanId])
+  plan                 Plan @relation(fields: [planId], references: [paypalPlanId],onDelete: SetDefault)
 @@index([planId])
   @@index([userId])
 }

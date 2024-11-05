@@ -200,8 +200,6 @@ class PayPalService {
         webhook_event: payload, // Add the actual webhook event payload
       };
 
-      console.log("Verification Payload:", JSON.stringify(verificationPayload, null, 2));
-
       const response = await fetch(`${this.baseUrl}/v1/notifications/verify-webhook-signature`, {
         method: "POST",
         headers: {
@@ -218,11 +216,11 @@ class PayPalService {
       }
 
       const data = await response.json();
-      console.log("Verification Response:", JSON.stringify(data, null, 2));
 
+      console.log("✅ verification status: ", data.verification_status);
       return data.verification_status === "SUCCESS";
     } catch (error) {
-      console.error("Error verifying webhook signature:", error);
+      console.error("🚨 Error verifying webhook signature 🚨:", error);
       return false; // Changed to return false instead of throwing
     }
   }
